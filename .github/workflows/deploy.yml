@@ -2,21 +2,31 @@ name: Deploy to EC2
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main    # ya jis branch se deploy karna ho
+  workflow_dispatch:     # manual trigger bhi possible
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Copy files to EC2
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        source: "index.html"
-        target: "/home/ec2-user/html/"
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2user.pem
+          chmod 600 ~/.ssh/ec2user.pem
+
+      - name: Copy files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}          # EC2 public IP
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}       # GitHub secret containing your private key
+          port: 22
+          source: "index.html"                   # file ya folder to copy
+          target: "/home/ec2-user/"             # destination path on EC2
+          debug: true                            # optional, for verbose logs
