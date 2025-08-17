@@ -24,7 +24,7 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}          # EC2 public IP
-          username: ec2-user
+          username: ec2user
           key: ${{ secrets.EC2_SSH_KEY }}       # GitHub secret containing your private key
           port: 22
           source: "index.html"                   # file ya folder to copy
