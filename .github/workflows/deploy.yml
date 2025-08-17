@@ -3,7 +3,7 @@ name: Deploy HTML to EC2
 on:
   push:
     branches:
-      - main  # or your default branch
+      - main  # This runs the workflow when you push to the 'main' branch
 
 jobs:
   deploy:
@@ -13,18 +13,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Deploy to EC2
+      - name: Set up SSH Agent
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Deploy index.html to EC2
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          # The scp command copies your index.html file to the EC2 instance.
+          # The -o StrictHostKeyChecking=no option bypasses the host key check,
+          # which is simpler for this kind of automated deployment.
+          scp -o StrictHostKeyChecking=no ./index.html ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/var/www/html/
 
-          echo "Deploying index.html to EC2..."
-          # The -o StrictHostKeyChecking=no part is not recommended for production but can be used for simplicity
-          scp -i ~/.ssh/id_rsa ./index.html $EC2_USER@$EC2_HOST:/var/www/html/
-          echo "Deployment successful."
+          echo "Deployment successful!"
