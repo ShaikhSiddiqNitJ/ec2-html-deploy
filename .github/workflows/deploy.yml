@@ -1,10 +1,9 @@
-name: Deploy to EC2
+name: Deploy HTML to EC2
 
 on:
   push:
     branches:
-      - main    # ya jis branch se deploy karna ho
-  workflow_dispatch:     # manual trigger bhi possible
+      - main  # or your default branch
 
 jobs:
   deploy:
@@ -14,19 +13,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup SSH key
+      - name: Deploy to EC2
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2user.pem
-          chmod 600 ~/.ssh/ec2user.pem
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
-      - name: Copy files to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}          # EC2 public IP
-          username: ec2user
-          key: ${{ secrets.EC2_SSH_KEY }}       # GitHub secret containing your private key
-          port: 22
-          source: "index.html"                   # file ya folder to copy
-          target: "/home/ec2-user/"             # destination path on EC2
-          debug: true                            # optional, for verbose logs
+          echo "Deploying index.html to EC2..."
+          # The -o StrictHostKeyChecking=no part is not recommended for production but can be used for simplicity
+          scp -i ~/.ssh/id_rsa ./index.html $EC2_USER@$EC2_HOST:/var/www/html/
+          echo "Deployment successful."
